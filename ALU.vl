@@ -1,0 +1,183 @@
+// To make this ALU module we used 14 components which are:
+// 4 NOT Gates
+// 3 4By1 MUX
+// 3 2By1 MUX
+// 1 AND Gate
+// 3 Full Adders
+
+
+// This is the 2By1 MUX implementation which has an output y and 3 inputs i0, i1 and s
+// It has been designed using 1 NOT Gate, 2 AND Gates and 1 OR Gate
+module mux2by1(output y, input i0, input i1, input s);
+    wire sbar, a, b;
+    // A NOT Gate that gets the complement of the input s and outputs sbar
+    not(sbar, s);
+    // An AND Gate that takes 2 inputs i1 and s and outputs a
+    and(a, i1, s);
+    // An AND Gate that takes 2 inputs i0 and sbar and outputs b
+    and(b, i0, sbar);
+    // An OR Gate that takes 2 inputs a and b and outputs y
+    or(y, a, b);
+endmodule
+
+// This is the 4By1 MUX implementation which has an ouput y and 6 inputs i0, i1, i2, i3, s0 and s1
+// It has been designed using 2 NOT Gates, 4 AND Gates and 1 OR Gate
+module mux4by1(output y, input i0, input i1, input i2, input i3, input s0, input s1);
+wire a, b, c, d, s0bar, s1bar;
+    // A NOT Gate that gets the complement of the input s0 and outputs s0bar
+    not(s0bar, s0);
+    // A NOT Gate that gets the complement of the input s1 and outputs s1bar
+    not(s1bar, s1);
+    // An AND Gate that takes 3 inputs i0, s0bar and s1bar and outputs a
+    and(a, i0, s0bar, s1bar);
+    // An AND Gate that takes 3 inputs i1, s0 and s1bar and outputs b
+    and(b, i1, s0, s1bar);
+    // An AND Gate that takes 3 inputs i2, s0bar and s1 and ouputs c
+    and(c, i2, s0bar, s1);
+    // An AND Gate that takes 3 inputs i3, s0 and s1 and outputs d
+    and(d, i3, s0, s1);
+    // An OR Gate that takes 4 inputs a, b, c, and d and outputs y
+    or(y, a, b, c, d);
+endmodule
+
+// This is the Full Adder implementation which has 2 outputs sum and carry and takes 3 inputs a, b and c
+// It has been designed using 2 XOR Gates, 2 AND Gates and 1 OR Gate
+module full_adder(output sum, output carry, input a, input b, input c);
+    wire sum1, carry1, carry2;
+    // An XOR Gate that takes 2 inputs a and b and outputs sum1
+    xor(sum1, a, b);
+    // An XOR Gate that takes 2 inputs sum1 and c and outputs sum
+    xor(sum, sum1, c);
+    // An AND Gate that takes 2 inputs sum1 and c and outputs carry2
+    and(carry2, sum1, c);
+    // An AND Gate that takes 2 inputs a and b and outputs carry1
+    and(carry1, a, b);
+    // An OR Gate that takes 2 inputs carry2 and carry1 and outputs carry
+    or(carry, carry2, carry1);
+endmodule
+
+
+// This is the implementation of the ALU needed which has:
+// 2 selection inputs s0 and s1
+// A 3 bit input A
+// A 3 bit input B
+// A 3 bit output G
+// An output cout
+
+// The functionality of the ALU is as follows:
+// When the selection inputs are 00, G[0] = A-1
+// When the selection inputs are 01, G[1] = A+B
+// When the selection inputs are 10, G[2] = A-B
+// When the selection inputs are 11, G[3] = -B
+
+module ALU(output[2:0] G, output cout, input s0, input s1, input [2:0] A, input [2:0] B);
+
+    wire s;
+    // A 3 bit wire m1
+    wire [2:0] m1;
+    // A 3 bit wire m2
+    wire [2:0] m2;
+    // A 2 bit wire c
+    wire [1:0] c;
+    // A 3 bit wire B_bar
+    wire [2:0] B_bar ;
+
+    // In the following 3 NOT Gates each one of them will take 1 bit of input B and outputs the complement of each bit
+    not(B_bar[0],B[0]);
+    not(B_bar[1],B[1]);
+    not(B_bar[2],B[2]);
+
+    // An AND Gate that takes 2 selection inputs s0 and s1 and outputs s
+    and(s, s0, s1);
+
+    // First bit operations:
+
+    // A 2By1 MUX that takes 3 inputs A[0], a logic 0 and s and outputs m1[0]
+    mux2by1 mux2by1_1(m1[0], A[0], 1'b0, s);
+
+    // A 4By1 MUX that takes:
+    // 4 inputs logic 1, B[0], B_bar[0] and B_bar[0]
+    // 2 selection inputs s0 and s1
+    // and outputs m2[0]
+    mux4by1 mux4by1_1(m2[0], 1'b1, B[0], B_bar[0], B_bar[0], s0, s1);
+
+    // A Full Adder that takes 3 inputs m1[0], m2[0] and s1 and outputs G[0]
+    full_adder full_adder_1(G[0], c[0], m1[0], m2[0], s1);
+
+
+    // Second bit operation:
+
+    // A 2By1 MUX that takes 3 inputs A[1], a logic 0 and s and outputs m1[1]
+    mux2by1 mux2by1_2(m1[1], A[1], 1'b0, s);
+
+    // A 4By1 MUX that takes:
+    // 4 inputs logic 1, B[1], B_bar[1] and B_bar[1]
+    // 2 selection inputs s0 and s1
+    // and outputs m2[1]
+    mux4by1 mux4by1_2(m2[1], 1'b1, B[1], B_bar[1], B_bar[1], s0, s1);
+
+    // A Full Adder that takes 3 inputs m1[1], m2[1] and c[0] and outputs G[1]
+    full_adder full_adder_2(G[1], c[1], m1[1], m2[1], c[0]);
+
+
+    // Third bit operation:
+
+    // A 2By1 MUX that takes 3 inputs A[2], a logic 0 and s and outputs m1[2]
+    mux2by1 mux2by1_3(m1[2], A[2], 1'b0, s);
+
+    // A 4By1 MUX that takes:
+    // 4 inputs logic 1, B[2], B_bar[2] and B_bar[2]
+    // 2 selection inputs s0 and s1
+    // and outputs m2[2]
+    mux4by1 mux4by1_3(m2[2], 1'b1, B[2], B_bar[2], B_bar[2], s0, s1);
+
+    // A Full Adder that takes 3 inputs m1[2], m2[2] and c[1] and outputs G[2]
+    full_adder full_adder_3(G[2], cout, m1[2], m2[2], c[1]);
+
+endmodule
+
+
+// The Test bench
+module testbench;
+    // A 3 bit wire G
+    wire [2:0]G;
+    wire cout;
+    // A 3 bit register a
+    reg [2:0]a;
+    // A 3 bit register b
+    reg [2:0]b;
+    reg s0,s1;
+    // instantiating the model(ALU)
+    ALU alu(G ,cout,s0, s1, a, b);
+    integer i , j , k;
+    // if the result is positive and last carry = 1 -> overflow case
+    initial
+    begin
+    // A for loop to generate input a
+    for(i = -4; i < 4; i = i + 1)
+        begin
+        // A for loop to generate input b
+        for(j = -4 ;j < 4 ;j = j + 1)
+            begin
+              for(k = 0 ; k < 4 ; k = k + 1)
+                begin
+                  assign a = i[2:0];// Assign 3 bits of integer i into input a
+                  assign b = j[2:0];// Assign 3 bits of integer j into input b
+                  
+                  // if(s0 = 0 ,s1 = 0) -> A - 1
+                  // if(s0 = 1 ,s1 = 0) -> A + B
+                  // if(s0 = 0 ,s1 = 1) -> A - B
+                  // if(s0 = 1 ,s1 = 1) -> -B
+                  assign s0 = k[0];
+                  assign s1 = k[1];
+                  // After 15 ns/ps (default timescale)
+                  #15;
+                  $display("cout = %b, G[2] = %b ,G[1] = %b ,G[0] = %b",cout,G[2],G[1],G[0]);
+                end
+              $display("--------------------------------------");
+            end
+        end
+        // After 20 ns/ps
+        #20 ; $finish;
+    end
+endmodule
